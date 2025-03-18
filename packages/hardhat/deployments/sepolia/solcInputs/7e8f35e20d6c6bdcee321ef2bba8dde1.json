@@ -1,0 +1,36 @@
+{
+  "language": "Solidity",
+  "sources": {
+    "contracts/VotingPlatform.sol": {
+      "content": "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.19;\n\ncontract VotingPlatform {\n    struct Poll {\n        uint id;\n        string question;\n        bool isActive;\n        address creator;\n        uint[] votes;\n        mapping(address => bool) hasVoted;\n    }\n\n    uint public pollCount;\n    mapping(uint => Poll) public polls;\n    mapping(uint => string[]) public pollOptions;\n\n    event PollCreated(uint indexed pollId, string question, address creator);\n    event Voted(uint indexed pollId, uint optionIndex, address voter, uint totalVotes);\n    event PollClosed(uint indexed pollId, address closer);\n\n    modifier onlyActivePoll(uint _pollId) {\n        require(polls[_pollId].isActive, \"Poll is not active\");\n        _;\n    }\n\n    function createPoll(string memory _question, string[] memory _options) public {\n        require(_options.length > 1, \"Poll must have at least two options\");\n\n        Poll storage newPoll = polls[pollCount];\n        newPoll.id = pollCount;\n        newPoll.question = _question;\n        newPoll.isActive = true;\n        newPoll.creator = msg.sender;\n        newPoll.votes = new uint[](_options.length);\n\n        pollOptions[pollCount] = _options;\n\n        emit PollCreated(pollCount, _question, msg.sender);\n        pollCount++;\n    }\n\n    function vote(uint _pollId, uint _optionIndex) public onlyActivePoll(_pollId) {\n        Poll storage poll = polls[_pollId];\n\n        require(_optionIndex < pollOptions[_pollId].length, \"Invalid option index\");\n        require(!poll.hasVoted[msg.sender], \"You have already voted\");\n\n        poll.votes[_optionIndex]++;\n        poll.hasVoted[msg.sender] = true;\n\n        emit Voted(_pollId, _optionIndex, msg.sender, poll.votes[_optionIndex]);\n    }\n\n    function getPoll(uint _pollId) public view returns (string memory, string[] memory, bool) {\n        return (polls[_pollId].question, pollOptions[_pollId], polls[_pollId].isActive);\n    }\n\n    function getPollVotes(uint _pollId) public view returns (uint[] memory) {\n        return polls[_pollId].votes;\n    }\n\n    function getPollOptions(uint _pollId) public view returns (string[] memory) {\n        return pollOptions[_pollId];\n    }\n\n    function closePoll(uint _pollId) public {\n        require(polls[_pollId].creator == msg.sender, \"Only creator can close poll\");\n        require(polls[_pollId].isActive, \"Poll is already closed\");\n        polls[_pollId].isActive = false;\n\n        emit PollClosed(_pollId, msg.sender);\n    }\n\n    function getAllPolls() public view returns (uint[] memory, string[] memory, bool[] memory) {\n        uint[] memory pollIds = new uint[](pollCount);\n        string[] memory questions = new string[](pollCount);\n        bool[] memory statuses = new bool[](pollCount);\n\n        for (uint i = 0; i < pollCount; i++) {\n            pollIds[i] = polls[i].id;\n            questions[i] = polls[i].question;\n            statuses[i] = polls[i].isActive;\n        }\n\n        return (pollIds, questions, statuses);\n    }\n\n    function getUserPolls(address _user) public view returns (uint[] memory, string[] memory, bool[] memory) {\n        uint count = 0;\n\n        // Count how many polls the user has created\n        for (uint i = 0; i < pollCount; i++) {\n            if (polls[i].creator == _user) {\n                count++;\n            }\n        }\n\n        // Create arrays for user's polls\n        uint[] memory userPollIds = new uint[](count);\n        string[] memory userQuestions = new string[](count);\n        bool[] memory userStatuses = new bool[](count);\n\n        uint index = 0;\n        for (uint i = 0; i < pollCount; i++) {\n            if (polls[i].creator == _user) {\n                userPollIds[index] = polls[i].id;\n                userQuestions[index] = polls[i].question;\n                userStatuses[index] = polls[i].isActive;\n                index++;\n            }\n        }\n\n        return (userPollIds, userQuestions, userStatuses);\n    }\n}\n"
+    }
+  },
+  "settings": {
+    "optimizer": {
+      "enabled": true,
+      "runs": 200
+    },
+    "evmVersion": "paris",
+    "outputSelection": {
+      "*": {
+        "*": [
+          "abi",
+          "evm.bytecode",
+          "evm.deployedBytecode",
+          "evm.methodIdentifiers",
+          "metadata",
+          "devdoc",
+          "userdoc",
+          "storageLayout",
+          "evm.gasEstimates"
+        ],
+        "": [
+          "ast"
+        ]
+      }
+    },
+    "metadata": {
+      "useLiteralContent": true
+    }
+  }
+}

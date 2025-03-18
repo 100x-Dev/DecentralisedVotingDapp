@@ -5,7 +5,6 @@ import { useParams } from "next/navigation";
 import { useScaffoldReadContract, useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
 
 const PollPage = () => {
-    // Always call hooks at the top level
     const params = useParams();
     const pollId = params.pollId;
     const [selectedOption, setSelectedOption] = useState<number | null>(null);
@@ -14,9 +13,9 @@ const PollPage = () => {
         contractName: "VotingPlatform",
         functionName: "getPoll",
         args: [typeof pollId === "string" ? BigInt(pollId) : BigInt(0)],
+        enabled: typeof pollId === "string",
     });
 
-    // Define handler function
     const handleVote = async () => {
         if (selectedOption === null || typeof pollId !== "string") {
             alert("Please select an option before voting");
@@ -35,7 +34,7 @@ const PollPage = () => {
         }
     };
 
-    // Conditional rendering based on the state
+    // Render based on conditions
     if (typeof pollId !== "string") {
         return <p className="text-center">Invalid poll ID</p>;
     }
@@ -56,13 +55,12 @@ const PollPage = () => {
         return <p className="text-center">This poll is no longer active</p>;
     }
 
-    // Main UI rendering
     return (
         <div className="container mx-auto px-4 py-8">
             <div className="max-w-2xl mx-auto bg-white rounded-lg shadow-md p-6">
                 <h1 className="text-2xl font-bold mb-4 text-purple-700">{question}</h1>
                 <div className="space-y-4">
-                    {options.map((option, index) => (
+                    {options.map((option: string, index: number) => (
                         <div
                             key={index}
                             className={`p-4 border rounded-lg cursor-pointer transition ${selectedOption === index ? "border-purple-500 bg-purple-50" : "border-gray-200 hover:border-purple-300"

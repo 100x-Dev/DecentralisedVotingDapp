@@ -60,6 +60,10 @@ contract VotingPlatform {
         return polls[_pollId].votes;
     }
 
+    function getPollOptions(uint _pollId) public view returns (string[] memory) {
+        return pollOptions[_pollId];
+    }
+
     function closePoll(uint _pollId) public {
         require(polls[_pollId].creator == msg.sender, "Only creator can close poll");
         require(polls[_pollId].isActive, "Poll is already closed");
@@ -68,32 +72,45 @@ contract VotingPlatform {
         emit PollClosed(_pollId, msg.sender);
     }
 
-    /**
-     * @dev Returns the list of active polls with their questions
-     */
-    function getActivePolls() public view returns (uint[] memory, string[] memory) {
-        uint activeCount = 0;
+    function getAllPolls() public view returns (uint[] memory, string[] memory, bool[] memory) {
+        uint[] memory pollIds = new uint[](pollCount);
+        string[] memory questions = new string[](pollCount);
+        bool[] memory statuses = new bool[](pollCount);
 
-        // First, determine the number of active polls
         for (uint i = 0; i < pollCount; i++) {
-            if (polls[i].isActive) {
-                activeCount++;
+            pollIds[i] = polls[i].id;
+            questions[i] = polls[i].question;
+            statuses[i] = polls[i].isActive;
+        }
+
+        return (pollIds, questions, statuses);
+    }
+
+    function getUserPolls(address _user) public view returns (uint[] memory, string[] memory, bool[] memory) {
+        uint count = 0;
+
+        // Count how many polls the user has created
+        for (uint i = 0; i < pollCount; i++) {
+            if (polls[i].creator == _user) {
+                count++;
             }
         }
 
-        // Create arrays to store active poll IDs and their questions
-        uint[] memory activePollIds = new uint[](activeCount);
-        string[] memory activeQuestions = new string[](activeCount);
+        // Create arrays for user's polls
+        uint[] memory userPollIds = new uint[](count);
+        string[] memory userQuestions = new string[](count);
+        bool[] memory userStatuses = new bool[](count);
 
         uint index = 0;
         for (uint i = 0; i < pollCount; i++) {
-            if (polls[i].isActive) {
-                activePollIds[index] = polls[i].id;
-                activeQuestions[index] = polls[i].question;
+            if (polls[i].creator == _user) {
+                userPollIds[index] = polls[i].id;
+                userQuestions[index] = polls[i].question;
+                userStatuses[index] = polls[i].isActive;
                 index++;
             }
         }
 
-        return (activePollIds, activeQuestions);
+        return (userPollIds, userQuestions, userStatuses);
     }
 }
