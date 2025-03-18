@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { RefObject, useRef, useState } from "react";
 import { NetworkOptions } from "./NetworkOptions";
 import CopyToClipboard from "react-copy-to-clipboard";
 import { getAddress } from "viem";
@@ -43,7 +43,7 @@ export const AddressInfoDropdown = ({
     setSelectingNetwork(false);
     dropdownRef.current?.removeAttribute("open");
   };
-  useOutsideClick(dropdownRef, closeDropdown);
+  useOutsideClick(dropdownRef as RefObject<HTMLElement>, closeDropdown);
 
   return (
     <>

@@ -1,90 +1,91 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
 import { useParams } from "next/navigation";
 import { useScaffoldReadContract, useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
 
-export default function PollPage() {
-    const { pollId } = useParams(); // Get pollId from the URL
-    const [selectedOption, setSelectedOption] = useState<number | null>(null);
+const PollPage = () => {
+  // Always call hooks at the top level
+  const params = useParams();
+  const pollId = params.pollId;
+  const [selectedOption, setSelectedOption] = useState<number | null>(null);
+  const { writeContractAsync } = useScaffoldWriteContract("VotingPlatform");
+  const { data: poll, isLoading } = useScaffoldReadContract({
+    contractName: "VotingPlatform",
+    functionName: "getPoll",
+    args: [typeof pollId === "string" ? BigInt(pollId) : BigInt(0)],
+  });
 
-    // Fetch Poll Data using Scaffold-ETH Hook
-    const { data: pollData, isLoading } = useScaffoldReadContract({
-        contractName: "VotingPlatform",
-        functionName: "getPoll",
-        args: [parseInt(pollId)],
-    });
+  // Define handler function
+  const handleVote = async () => {
+    if (selectedOption === null || typeof pollId !== "string") {
+      alert("Please select an option before voting");
+      return;
+    }
 
-    // Extract Poll Information
-    const question = pollData?.[0] || "";
-    const options = pollData?.[1] || [];
-    const isActive = pollData?.[2] ?? false;
+    try {
+      await writeContractAsync({
+        functionName: "vote",
+        args: [BigInt(pollId), BigInt(selectedOption)],
+      });
+      alert("Vote cast successfully!");
+    } catch (error) {
+      console.error("Error casting vote:", error);
+      alert("Failed to cast vote. Please try again.");
+    }
+  };
 
-    // Scaffold Write Hook for Voting
-    const { writeContractAsync: voteAsync } = useScaffoldWriteContract({
-        contractName: "VotingPlatform",
-    });
+  // Conditional rendering based on the state
+  if (typeof pollId !== "string") {
+    return <p className="text-center">Invalid poll ID</p>;
+  }
 
-    const handleVote = async () => {
-        if (selectedOption === null) {
-            alert("Please select an option to vote.");
-            return;
-        }
+  if (isLoading) {
+    return <p className="text-center">Loading poll data...</p>;
+  }
 
-        try {
-            await voteAsync({
-                functionName: "vote",
-                args: [parseInt(pollId), selectedOption],
-            });
-            alert("Vote cast successfully!");
-        } catch (e) {
-            console.error("Error casting vote:", e);
-            //alert("Failed to cast vote.");
-        }
-    };
+  if (!poll) {
+    return <p className="text-center">Poll not found</p>;
+  }
 
-    return (
-        <div className="flex justify-center items-center min-h-screen bg-gray-100 p-6">
-            <div className="bg-white shadow-lg rounded-lg p-6 max-w-lg w-full">
-                <h1 className="text-2xl font-bold text-gray-900 mb-4">{question ? `Poll: ${question}` : "Poll"}</h1>
+  const question = poll[0] || "";
+  const options = poll[1] || [];
+  const isActive = poll[2] ?? false;
 
-                {isLoading ? (
-                    <p className="text-gray-600">Loading poll...</p>
-                ) : isActive ? (
-                    <div>
-                        <h2 className="text-lg font-semibold text-gray-800 mb-3">Options:</h2>
-                        <ul className="space-y-2">
-                            {options.map((option, index) => (
-                                <li key={index} className="p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition">
-                                    <label className="flex items-center gap-2 cursor-pointer">
-                                        <input
-                                            type="radio"
-                                            name="pollOption"
-                                            value={index}
-                                            onChange={() => setSelectedOption(index)}
-                                            className="accent-blue-600"
-                                        />
-                                        <span className="text-gray-700">{option}</span>
-                                    </label>
-                                </li>
-                            ))}
-                        </ul>
+  if (!isActive) {
+    return <p className="text-center">This poll is no longer active</p>;
+  }
 
-                        <button
-                            className={`w-full mt-4 px-4 py-2 text-white font-semibold rounded-lg transition ${selectedOption === null
-                                ? "bg-gray-400 cursor-not-allowed"
-                                : "bg-blue-600 hover:bg-blue-700"
-                                }`}
-                            onClick={handleVote}
-                            disabled={selectedOption === null}
-                        >
-                            Submit Vote
-                        </button>
-                    </div>
-                ) : (
-                    <p className="text-red-500 text-lg font-semibold">This poll is closed.</p>
-                )}
+  // Main UI rendering
+  return (
+    <div className="container mx-auto px-4 py-8">
+      <div className="max-w-2xl mx-auto bg-white rounded-lg shadow-md p-6">
+        <h1 className="text-2xl font-bold mb-4 text-purple-700">{question}</h1>
+        <div className="space-y-4">
+          {options.map((option, index) => (
+            <div
+              key={index}
+              className={`p-4 border rounded-lg cursor-pointer transition ${
+                selectedOption === index ? "border-purple-500 bg-purple-50" : "border-gray-200 hover:border-purple-300"
+              }`}
+              onClick={() => setSelectedOption(index)}
+            >
+              {option}
             </div>
+          ))}
         </div>
-    );
-}
+        <button
+          className={`w-full mt-4 px-4 py-2 text-white font-semibold rounded-lg transition ${
+            selectedOption === null ? "bg-gray-400 cursor-not-allowed" : "bg-purple-600 hover:bg-purple-700"
+          }`}
+          onClick={handleVote}
+          disabled={selectedOption === null}
+        >
+          Cast Vote
+        </button>
+      </div>
+    </div>
+  );
+};
+
+export default PollPage;
